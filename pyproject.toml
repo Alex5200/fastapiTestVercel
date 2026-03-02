@@ -4,6 +4,15 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
+    "aioboto3>=7.0.0",
+    "aiobotocore>=3.2.0",
+    "boto3>=1.42.55",
     "fastapi>=0.135.0",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "python-json-logger>=4.0.0",
+    "python-multipart>=0.0.22",
+    "slowapi>=0.1.9",
+    "structlog>=25.5.0",
     "uvicorn>=0.41.0",
 ]
