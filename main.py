@@ -70,6 +70,15 @@ async def health_check(request: Request):
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
 
+@app.get("/api/v1/files/all")
+async def getAllfiles(
+        request: Request,
+        api_key:Annotated[str, Depends(get_api_key)] = None
+):
+    data = await s3_client.getAll_files()
+    print(data)
+    return data
+
 @app.post("/api/v1/files/upload")
 async def upload_pdf(
         request: Request,

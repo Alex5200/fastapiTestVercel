@@ -4,24 +4,77 @@ from botocore.exceptions import ClientError
 from fastapi import HTTPException, status
 from typing import List, Dict
 from config import settings
+import botocore.config
+
+from exceptions import logger
 
 
 class S3Client:
     def __init__(self):
         self.session = aioboto3.Session()
-        protocol = "https" if settings.s3_use_ssl else "http"
+        protocol = "https"
         self.endpoint_url = f"{protocol}://{settings.get_s3_url()}"
 
     def _get_client(self):
+        config = botocore.config.Config(
+            connect_timeout=10,
+            read_timeout=30,
+            retries={
+                'max_attempts': 3,
+                'mode': 'standard'  # или 'adaptive'
+            },
+            # Важно для self-signed сертификатов в dev-среде:
+            # verify=False  # ← Только для тестов! Не использовать в продакшене
+        )
+
         return self.session.client(
             's3',
             endpoint_url=self.endpoint_url,
             aws_access_key_id=settings.s3_access_key,
             aws_secret_access_key=settings.s3_secret_key,
             region_name=settings.s3_region,
-            use_ssl=settings.s3_use_ssl
+            config=config,
+            verify=False
         )
+    async def getAll_files(self, prefix: str = "") -> List[dict]:
+        """Возвращает список всех файлов в bucket с поддержкой пагинации"""
+        try:
+            async with self._get_client() as s3:
+                files = []
+                continuation_token = None
 
+                while True:
+                    kwargs = {
+                        'Bucket': settings.s3_bucket,
+                        'Prefix': prefix,
+                        'MaxKeys': 1000
+                    }
+                    if continuation_token:
+                        kwargs['ContinuationToken'] = continuation_token
+
+                    response = await s3.list_objects_v2(**kwargs)
+
+                    # Добавляем объекты в список
+                    for obj in response.get('Contents', []):
+                        files.append({
+                            'filename': obj['Key'],
+                            'size': obj['Size'],
+                            'last_modified': obj['LastModified'].isoformat()
+                        })
+
+                    # Проверяем, есть ли ещё страницы
+                    if not response.get('IsTruncated'):
+                        break
+                    continuation_token = response.get('NextContinuationToken')
+
+                return files  # ✅ Пустой список — это нормально
+
+        except ClientError as e:
+            logger.error(f"S3 list error: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to retrieve file list"  # ✅ Не раскрываем внутренние детали
+            )
     async def upload_file(self, file_data: bytes, filename: str, content_type: str = "application/pdf") -> str:
         try:
             async with self._get_client() as s3:
@@ -71,25 +124,39 @@ class S3Client:
                 detail=f"S3 delete error: {str(e)}"
             )
 
-    async def list_files(self, prefix: str = "") -> List[Dict]:
+    async def list_files(self, prefix: str = "", max_keys: int = 1000) -> List[Dict]:
         try:
             async with self._get_client() as s3:
-                response = await s3.list_objects_v2(
-                    Bucket=settings.s3_bucket,
-                    Prefix=prefix
-                )
                 files = []
-                for obj in response.get('Contents', []):
-                    files.append({
-                        'filename': obj['Key'],
-                        'size': obj['Size'],
-                        'last_modified': obj['LastModified'].isoformat()
-                    })
+                continuation_token = None
+
+                while True:
+                    kwargs = {
+                        'Bucket': settings.s3_bucket,
+                        'Prefix': prefix,
+                        'MaxKeys': max_keys
+                    }
+                    if continuation_token:
+                        kwargs['ContinuationToken'] = continuation_token
+
+                    response = await s3.list_objects_v2(**kwargs)
+
+                    for obj in response.get('Contents', []):
+                        files.append({
+                            'filename': obj['Key'],
+                            'size': obj['Size'],
+                            'last_modified': obj['LastModified'].isoformat()
+                        })
+
+                    if not response.get('IsTruncated'):
+                        break
+                    continuation_token = response.get('NextContinuationToken')
+
                 return files
         except ClientError as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"S3 list error: {str(e)}"
+                detail="S3 list error"  # не раскрываем детали внутренней ошибки
             )
 
 

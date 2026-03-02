@@ -8,12 +8,12 @@ import os
 class Settings(BaseSettings):
     # S3
     s3_endpoint: str = Field(default="localhost")
-    s3_port: int = Field(default=9000)
+    #s3_port: int = Field(default=9000)
     s3_region: str = Field(default="us-east-1")
     s3_bucket: str = Field(default="my-bucket")
     s3_access_key: str = Field(default="")
     s3_secret_key: str = Field(default="")
-    s3_use_ssl: bool = Field(default=False)
+    s3_use_ssl: bool = Field(default=True)
 
     # API Keys
     api_keys_raw: str = Field(default="", alias="API_KEYS")
@@ -32,6 +32,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
         populate_by_name=True,
+
     )
 
     @field_validator("api_keys_raw", mode="before")
@@ -48,7 +49,7 @@ class Settings(BaseSettings):
         return [key.strip() for key in self.api_keys_raw.split(",") if key.strip()]
 
     def get_s3_url(self) -> str:
-        return f"{self.s3_endpoint}:{self.s3_port}"
+        return f"{self.s3_endpoint}"
 
     def is_valid_key(self, key: str) -> bool:
         if not key:
