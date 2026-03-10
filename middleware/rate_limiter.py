@@ -1,5 +1,5 @@
 # middleware/rate_limiter.py
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -16,14 +16,17 @@ class InMemoryRateLimiter:
         self.requests: Dict[str, List[datetime]] = defaultdict(list)
         self.lock = threading.Lock()
 
-    def is_allowed(self, client_id: str, max_requests: int, window_seconds: int) -> bool:
+    def is_allowed(
+        self, client_id: str, max_requests: int, window_seconds: int
+    ) -> bool:
         now = datetime.now()
         window_start = now - timedelta(seconds=window_seconds)
 
         with self.lock:
             # Очистить старые запросы
             self.requests[client_id] = [
-                req_time for req_time in self.requests[client_id]
+                req_time
+                for req_time in self.requests[client_id]
                 if req_time > window_start
             ]
 
@@ -35,15 +38,20 @@ class InMemoryRateLimiter:
             self.requests[client_id].append(now)
             return True
 
-    def get_remaining(self, client_id: str, max_requests: int, window_seconds: int) -> int:
+    def get_remaining(
+        self, client_id: str, max_requests: int, window_seconds: int
+    ) -> int:
         now = datetime.now()
         window_start = now - timedelta(seconds=window_seconds)
 
         with self.lock:
-            current_count = len([
-                req_time for req_time in self.requests[client_id]
-                if req_time > window_start
-            ])
+            current_count = len(
+                [
+                    req_time
+                    for req_time in self.requests[client_id]
+                    if req_time > window_start
+                ]
+            )
             return max(0, max_requests - current_count)
 
 
@@ -52,13 +60,12 @@ class RedisRateLimiter:
 
     def __init__(self, host: str, port: int):
         self.redis = redis.Redis(
-            host=host,
-            port=port,
-            decode_responses=True,
-            socket_connect_timeout=5
+            host=host, port=port, decode_responses=True, socket_connect_timeout=5
         )
 
-    def is_allowed(self, client_id: str, max_requests: int, window_seconds: int) -> bool:
+    def is_allowed(
+        self, client_id: str, max_requests: int, window_seconds: int
+    ) -> bool:
         key = f"rate_limit:{client_id}"
 
         try:
@@ -73,7 +80,9 @@ class RedisRateLimiter:
             # Если Redis недоступен, разрешаем запрос (fail-open)
             return True
 
-    def get_remaining(self, client_id: str, max_requests: int, window_seconds: int) -> int:
+    def get_remaining(
+        self, client_id: str, max_requests: int, window_seconds: int
+    ) -> int:
         key = f"rate_limit:{client_id}"
         try:
             current_count = int(self.redis.get(key) or 0)
@@ -104,14 +113,12 @@ async def rate_limit_middleware(request: Request, call_next):
 
     # Проверка лимита
     if not rate_limiter.is_allowed(
-            client_id,
-            max_requests=settings.rate_limit_requests,
-            window_seconds=settings.rate_limit_window
+        client_id,
+        max_requests=settings.rate_limit_requests,
+        window_seconds=settings.rate_limit_window,
     ):
         remaining = rate_limiter.get_remaining(
-            client_id,
-            settings.rate_limit_requests,
-            settings.rate_limit_window
+            client_id, settings.rate_limit_requests, settings.rate_limit_window
         )
 
         return JSONResponse(
@@ -119,14 +126,14 @@ async def rate_limit_middleware(request: Request, call_next):
             content={
                 "detail": "Too Many Requests",
                 "message": "Вы превысили лимит запросов. Попробуйте позже.",
-                "retry_after": settings.rate_limit_window
+                "retry_after": settings.rate_limit_window,
             },
             headers={
                 "Retry-After": str(settings.rate_limit_window),
                 "X-RateLimit-Limit": str(settings.rate_limit_requests),
                 "X-RateLimit-Remaining": str(remaining),
-                "X-RateLimit-Reset": str(settings.rate_limit_window)
-            }
+                "X-RateLimit-Reset": str(settings.rate_limit_window),
+            },
         )
 
     # Продолжаем запрос
@@ -134,9 +141,7 @@ async def rate_limit_middleware(request: Request, call_next):
 
     # Добавляем заголовки о лимитах
     remaining = rate_limiter.get_remaining(
-        client_id,
-        settings.rate_limit_requests,
-        settings.rate_limit_window
+        client_id, settings.rate_limit_requests, settings.rate_limit_window
     )
     response.headers["X-RateLimit-Limit"] = str(settings.rate_limit_requests)
     response.headers["X-RateLimit-Remaining"] = str(remaining)

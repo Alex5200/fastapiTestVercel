@@ -2,13 +2,12 @@
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Optional
-import os
 
 
 class Settings(BaseSettings):
     # S3
     s3_endpoint: str = Field(default="localhost")
-    #s3_port: int = Field(default=9000)
+    # s3_port: int = Field(default=9000)
     s3_region: str = Field(default="us-east-1")
     s3_bucket: str = Field(default="my-bucket")
     s3_access_key: str = Field(default="")
@@ -32,7 +31,6 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
         populate_by_name=True,
-
     )
 
     @field_validator("api_keys_raw", mode="before")

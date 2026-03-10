@@ -34,7 +34,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         if settings.log_json:
             logger.info(json.dumps(log_info))
         else:
-            logger.info(f"{log_info['event']} - {log_info['method']} - {log_info['path']}")
+            logger.info(
+                f"{log_info['event']} - {log_info['method']} - {log_info['path']}"
+            )
 
         response = await call_next(request)
 

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Request
 from fastapi.security import APIKeyHeader
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 import sys
@@ -75,8 +75,7 @@ async def getAllFiles(
     except Exception as e:
         logger(f"Error getAllFiles {e}")
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Server error"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Server error"
         )
 
 
