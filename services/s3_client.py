@@ -12,8 +12,7 @@ from repositories.s3_repository import S3Repository
 class S3Client(S3Repository):
     def __init__(self):
         self.session = aioboto3.Session()
-        protocol = "https"
-        self.endpoint_url = f"{protocol}://{settings.get_s3_url()}"
+        self.endpoint_url = f"https://{settings.get_s3_url()}"
 
     def _get_client(self):
         config = botocore.config.Config(
@@ -151,6 +150,7 @@ class S3Client(S3Repository):
 
                 return files
         except ClientError as e:
+            logger.error(f"S3 list error: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="S3 list error",

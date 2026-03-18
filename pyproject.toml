@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.135.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
+    "pytest>=9.0.2",
     "python-json-logger>=4.0.0",
     "python-multipart>=0.0.22",
     "requests>=2.32.5",
