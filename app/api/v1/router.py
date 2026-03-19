@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import s3Api
+from api.v1 import s3Api
 
 api_router = APIRouter()
 

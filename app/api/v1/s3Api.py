@@ -6,10 +6,10 @@ from fastapi.responses import StreamingResponse
 
 from starlette import status
 
-from app.api.v1.filename import filenames
+from api.v1.filename import filenames
 from config import settings
 from typing import Annotated
-from app.api.v1.apiKeyHandler import get_api_key
+from api.v1.apiKeyHandler import get_api_key
 from services import s3_client
 import io
 
